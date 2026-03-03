@@ -26,7 +26,7 @@ exports.sendOTP = async (phone) => {
   };
 };
 
-exports.verifyOTP = async (phone, code) => {
+exports.verifyOTP = async (phone, code, loginType = "customer") => {
   if (!phone || !code) {
     throw new Error("Phone and OTP code are required");
   }
@@ -54,22 +54,52 @@ exports.verifyOTP = async (phone, code) => {
   // Find or create user
   let user = await User.findOne({ where: { phone } });
 
-  if (!user) {
+  // Role-based login enforcement
+  const roleMap = {
+    customer: "CUSTOMER",
+    admin: "ADMIN",
+    superadmin: "SUPER_ADMIN",
+  };
+
+  const expectedRole = roleMap[loginType] || "CUSTOMER";
+
+  if (user) {
+    // Existing user - enforce role match
+    if (user.role !== expectedRole) {
+      const portalMap = {
+        CUSTOMER: "customer login page",
+        ADMIN: "admin login page (/admin/login)",
+        SUPER_ADMIN: "super admin login page (/superadmin/login)",
+      };
+      throw new Error(
+        `This phone number is registered as ${user.role}. Please use the ${portalMap[user.role]}.`
+      );
+    }
+  } else {
+    // New user - only allow customer self-registration
+    if (loginType !== "customer") {
+      throw new Error(
+        "Account not found. Admin and SuperAdmin accounts must be created by a SuperAdmin."
+      );
+    }
     user = await User.create({
       phone,
+      role: "CUSTOMER",
       isVerified: true,
     });
-  } else {
-    user.isVerified = true;
-    await user.save();
   }
 
-  // CHECK onboarding status here (after user exists)
-  const profile = await UserProfile.findOne({
-    where: { userId: user.id },
-  });
+  user.isVerified = true;
+  await user.save();
 
-  const onboardingCompleted = profile?.onboardingCompleted || false;
+  // CHECK onboarding status here (only for customers)
+  let onboardingCompleted = false;
+  if (user.role === "CUSTOMER") {
+    const profile = await UserProfile.findOne({
+      where: { userId: user.id },
+    });
+    onboardingCompleted = profile?.onboardingCompleted || false;
+  }
 
   // Delete OTP after success
   await OTP.destroy({ where: { phone } });
@@ -84,6 +114,7 @@ exports.verifyOTP = async (phone, code) => {
   return {
     message: "OTP verified successfully",
     user,
+    role: user.role,
     onboardingCompleted,
     ...tokens,
   };

@@ -5,6 +5,8 @@ const HealthProfile = require("./healthProfile.model");
 const CoverageProfile = require("./coverageProfile.model");
 const FinancialProfile = require("./financialProfile.model");
 const PolicyProfile = require("./policyProfile.model");
+const AdminProfile = require("./adminProfile.model");
+const SuperAdminProfile = require("./superAdminProfile.model");
 
 // User → Main Profile
 User.hasOne(UserProfile, { foreignKey: "userId", as: "profile" });
@@ -25,5 +27,13 @@ FinancialProfile.belongsTo(User, { foreignKey: "userId" });
 
 User.hasOne(PolicyProfile, { foreignKey: "userId", as: "policy" });
 PolicyProfile.belongsTo(User, { foreignKey: "userId" });
+
+// User → Admin Profile
+User.hasOne(AdminProfile, { foreignKey: "userId", as: "adminProfile" });
+AdminProfile.belongsTo(User, { foreignKey: "userId" });
+
+// User → SuperAdmin Profile
+User.hasOne(SuperAdminProfile, { foreignKey: "userId", as: "superAdminProfile" });
+SuperAdminProfile.belongsTo(User, { foreignKey: "userId" });
 
 module.exports = {};
