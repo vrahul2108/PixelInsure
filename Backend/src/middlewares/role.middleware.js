@@ -5,7 +5,7 @@ module.exports = (...allowedRoles) => {
 
       if (!allowedRoles.includes(userRole)) {
         return res.status(403).json({
-          message: "Access denied: Required role: ADMIN",
+          message: `Access denied: Required role(s): ${allowedRoles.join(", ")}`,
         });
       }
 

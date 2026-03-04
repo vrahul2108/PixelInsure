@@ -1,5 +1,19 @@
 const superAdminService = require("../services/superAdmin.service");
 
+exports.dashboard = async (req, res) => {
+  try {
+    const data = await superAdminService.getDashboardData(req.user.id);
+    res.json({
+      message: "Welcome Super Admin",
+      ...data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 exports.createAdmin = async (req, res) => {
   try {
     const { phone, name, email, permissions } = req.body;

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import StepZero from "../steps/step-zero"
@@ -119,95 +120,144 @@ const steps = [
   { id: 5, title: "Coverage", description: "Your preferences" },
 ]
 
+const defaultData: OnboardingData = {
+  name: "",
+  gender: null,
+  age: null,
+  maritalStatus: null,
+  dependents: null,
+  annualIncome: "",
+  employmentType: "",
+  educationLevel: null,
+  persona: null,
+  spouseAge: null,
+  childrenAges: [],
+  parentsAges: [],
+  parentsFinanciallyDependent: null,
+  childrenPlannedIn3To5Years: null,
+  city: "",
+  cityTier: null,
+  existingDiseases: [],
+  hospitalizationLast3Years: null,
+  smoking: null,
+  alcohol: null,
+  height: null,
+  weight: null,
+  bmi: null,
+  willingnessToAcceptCopay: null,
+  insurerPreference: null,
+  homeHealthcareImportant: null,
+  annualHealthCheckupImportant: null,
+  coverageAmount: "",
+  roomRent: null,
+  restoreBenefit: null,
+  daycare: true,
+  opd: false,
+  maternity: false,
+  criticalIllness: false,
+  cashlessPreferred: null,
+  shortWaitingPeriod: null,
+  premiumVsCoverage: 50,
+  budgetRange: "",
+  willingToIncrease: null,
+  paymentFrequency: null,
+  comfortWithLockIn: null,
+  jobIncomeChangeLikelihood: null,
+  brandReputationImportance: null,
+  digitalVsRMPreference: null,
+  primaryIncomeEarner: null,
+  spouseEarning: null,
+  familyMedicalHistory: null,
+  physicalActivityLevel: null,
+  monthlyHouseholdExpense: "",
+  existingSavings: "",
+  existingLifeCover: "",
+  homeLoanOutstanding: "",
+  personalBusinessLoan: "",
+  totalEMI: "",
+  selectedGoals: [],
+  childEducationCost: "",
+  retirementAge: null,
+  incomeReplacementPeriod: null,
+  inflationAssumption: null,
+  riskAppetite: null,
+  previousPolicySurrender: null,
+  recommendedPolicyType: null,
+  selectedPolicyType: null,
+  waiverOfPremium: false,
+  criticalIllnessRider: false,
+  accidentalRider: false,
+}
+
 export default function OnboardingFlow() {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
-  const [data, setData] = useState<OnboardingData>({
-    name: "",
-    gender: null,
-    age: null,
-    maritalStatus: null,
-    dependents: null,
-    annualIncome: "",
-    employmentType: "",
-    educationLevel: null,
-    persona: null,
-    spouseAge: null,
-    childrenAges: [],
-    parentsAges: [],
-    parentsFinanciallyDependent: null,
-    childrenPlannedIn3To5Years: null,
-    city: "",
-    cityTier: null,
-    existingDiseases: [],
-    hospitalizationLast3Years: null,
-    smoking: null,
-    alcohol: null,
-    height: null,
-    weight: null,
-    bmi: null,
-    willingnessToAcceptCopay: null,
-    insurerPreference: null,
-    homeHealthcareImportant: null,
-    annualHealthCheckupImportant: null,
-    coverageAmount: "",
-    roomRent: null,
-    restoreBenefit: null,
-    daycare: true,
-    opd: false,
-    maternity: false,
-    criticalIllness: false,
-    cashlessPreferred: null,
-    shortWaitingPeriod: null,
-    premiumVsCoverage: 50,
-    budgetRange: "",
-    willingToIncrease: null,
-    paymentFrequency: null,
-    comfortWithLockIn: null,
-    jobIncomeChangeLikelihood: null,
-    brandReputationImportance: null,
-    digitalVsRMPreference: null,
-    primaryIncomeEarner: null,
-    spouseEarning: null,
-    familyMedicalHistory: null,
-    physicalActivityLevel: null,
-    monthlyHouseholdExpense: "",
-    existingSavings: "",
-    existingLifeCover: "",
-    homeLoanOutstanding: "",
-    personalBusinessLoan: "",
-    totalEMI: "",
-    selectedGoals: [],
-    childEducationCost: "",
-    retirementAge: null,
-    incomeReplacementPeriod: null,
-    inflationAssumption: null,
-    riskAppetite: null,
-    previousPolicySurrender: null,
-    recommendedPolicyType: null,
-    selectedPolicyType: null,
-    waiverOfPremium: false,
-    criticalIllnessRider: false,
-    accidentalRider: false,
-  })
+  const [data, setData] = useState<OnboardingData>(defaultData)
+  const [isLoading, setIsLoading] = useState(true)
 
   const progress = ((currentStep + 1) / steps.length) * 100
 
+  // Load progress and all saved data on mount for pre-fill
+  const loadProgressAndData = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const res = await api("/onboarding/progress")
+
+      if (res.onboardingCompleted) {
+        // Already completed - redirect to dashboard
+        router.push("/dashboard")
+        return
+      }
+
+      if (res.step !== undefined) {
+        setCurrentStep(res.step)
+      }
+
+      // Pre-fill all saved data from backend
+      if (res.savedData) {
+        setData((prev) => {
+          const merged = { ...prev }
+          for (const key of Object.keys(res.savedData)) {
+            const value = res.savedData[key]
+            if (value !== null && value !== undefined && value !== "") {
+              ;(merged as any)[key] = value
+            }
+          }
+          return merged
+        })
+      }
+    } catch (err) {
+      console.error("Progress load failed")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [router])
+
+  useEffect(() => {
+    loadProgressAndData()
+  }, [loadProgressAndData])
+
   const handleNext = async (stepData: Partial<OnboardingData>) => {
-    const newData = { ...data, ...stepData };
-    setData(newData);
+    const newData = { ...data, ...stepData }
+    setData(newData)
+
+    const nextStep = currentStep + 1
 
     await api("/onboarding/save", {
       method: "POST",
       body: JSON.stringify({
         ...newData,
-        step: currentStep + 1,
+        step: nextStep,
       }),
-    });
+    })
 
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(nextStep)
+    } else {
+      // Onboarding complete - redirect to dashboard
+      router.push("/dashboard")
     }
-  };
+  }
 
   const handleBack = () => {
     if (currentStep > 0) {
@@ -215,32 +265,16 @@ export default function OnboardingFlow() {
     }
   }
 
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const res = await api("/onboarding/progress");
-
-        if (res.step !== undefined) {
-          setCurrentStep(res.step);
-        }
-      } catch (err) {
-        console.log("Progress load failed");
-      }
-    };
-
-    loadProgress();
-  }, []);
-
-  useEffect(() => {
-  const fetchProgress = async () => {
-    const res = await api("/onboarding/progress");
-    if (res.step !== undefined) {
-      setCurrentStep(res.step);
-    }
-  };
-
-  fetchProgress();
-}, []);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading your progress...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 md:p-8">
