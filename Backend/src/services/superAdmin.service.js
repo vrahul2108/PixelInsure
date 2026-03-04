@@ -1,6 +1,38 @@
 const sequelize = require("../db/config/database");
 const User = require("../models/user.model");
 const AdminProfile = require("../models/adminProfile.model");
+const SuperAdminProfile = require("../models/superAdminProfile.model");
+
+exports.getDashboardData = async (superAdminId) => {
+  const profile = await SuperAdminProfile.findOne({
+    where: { userId: superAdminId },
+  });
+
+  if (!profile) {
+    throw new Error("SuperAdmin profile not found");
+  }
+
+  const totalAdmins = await User.count({ where: { role: "ADMIN" } });
+  const totalCustomers = await User.count({ where: { role: "CUSTOMER" } });
+
+  const admins = await User.findAll({
+    where: { role: "ADMIN" },
+    include: [
+      {
+        model: AdminProfile,
+        as: "adminProfile",
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+  });
+
+  return {
+    profile,
+    totalAdmins,
+    totalCustomers,
+    admins,
+  };
+};
 
 exports.createAdmin = async (phone, profileData, createdBy) => {
   const transaction = await sequelize.transaction();
