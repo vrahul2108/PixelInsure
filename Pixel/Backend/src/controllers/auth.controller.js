@@ -77,9 +77,9 @@ exports.sendOtp = async (req, res) => {
 
 exports.verifyOtp = async (req, res) => {
   try {
-    const { phone, code } = req.body;
+    const { phone, code, loginType } = req.body;
 
-    const result = await authService.verifyOTP(phone, code);
+    const result = await authService.verifyOTP(phone, code, loginType || "customer");
 
     res.json(result);
   } catch (error) {

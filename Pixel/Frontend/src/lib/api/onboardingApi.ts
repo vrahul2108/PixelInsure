@@ -6,3 +6,7 @@ export const saveOnboarding = async (data: any) => {
     body: JSON.stringify(data),
   });
 };
+
+export const getOnboardingProgress = async () => {
+  return api("/onboarding/progress");
+};

@@ -76,6 +76,8 @@ require("./models/healthProfile.model");
 require("./models/coverageProfile.model");
 require("./models/financialProfile.model");
 require("./models/policyProfile.model");
+require("./models/adminProfile.model");
+require("./models/superAdminProfile.model");
 
 // Load relations
 require("./models/associations");

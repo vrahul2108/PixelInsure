@@ -1,17 +1,11 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Shield, CheckCircle2, Lock, Users, TrendingUp, FileCheck, Clock, BarChart3, Brain } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Shield, CheckCircle2, Lock, Users, TrendingUp, FileCheck, BarChart3, Brain } from "lucide-react"
 import pixelLogo from "../../public/images/pixel-insure-logo.png"
 import hdfcLife from "../../public/images/partners/hdfc-life.png"
 import hdfcErgo from "../../public/images/partners/hdfc-ergo.png"
@@ -23,103 +17,9 @@ import ICICI from "../../public/images/partners/icici-lombard.png"
 import Kotak from "../../public/images/partners/kotak-life.png"
 import tataAIA from "../../public/images/partners/tata-aia-life.png"
 import ICICIPred from "../../public/images/partners/icici-prudential.png"
-import { api } from "@/lib/api/client";
+import OtpLoginForm from "./otp-login-form"
 
 export default function HomePage() {
-  const router = useRouter()
-  const [step, setStep] = useState<"mobile" | "otp">("mobile")
-  const [mobileNumber, setMobileNumber] = useState("") // Changed from 'mobile' to 'mobileNumber'
-  const [otp, setOtp] = useState("") // Changed from array to string
-
-  const [timer, setTimer] = useState(30)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-
-  const handleMobileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (mobileNumber.length !== 10) {
-      setError("Enter valid mobile number");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-
-      await api("/auth/send-otp", {
-        method: "POST",
-        body: JSON.stringify({
-          phone: mobileNumber,
-        }),
-      });
-
-      setStep("otp");
-
-      setTimer(30);
-      const interval = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
- 
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (otp.length !== 6) {
-      setError("Enter complete OTP");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const res = await api("/auth/verify-otp", {
-      method: "POST",
-      body: JSON.stringify({
-        phone: mobileNumber,
-        code: otp,
-      }),
-    });
-
-    if (!res.accessToken) {
-      setError(res.message || "Invalid OTP");
-      return;
-    }
-
-    localStorage.setItem("accessToken", res.accessToken);
-    localStorage.setItem("refreshToken", res.refreshToken);
-
-    if (res.onboardingCompleted) {
-      router.push("/dashboard");
-    } else {
-      router.push("/onboarding");
-    }
-    } catch (err: any) {
-      setError(err.message || "OTP verification failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Added a new handleResendOtp that resets timer and triggers OTP resend logic
-  const handleResendOtp = () => {
-    setTimer(30)
-    setError("")
-    // Simulate API call to resend OTP
-    // ... your resend OTP logic here ...
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,112 +94,11 @@ export default function HomePage() {
 
           {/* Right: OTP Card */}
           <div className="flex justify-center lg:justify-end mt-4 lg:mt-0">
-            <Card className="w-full max-w-md p-4 sm:p-6 lg:p-8 shadow-xl border-2">
-              {step === "mobile" ? (
-                <form onSubmit={handleMobileSubmit} className="space-y-4 sm:space-y-6">
-                  <div className="space-y-2 text-center">
-                    <h2 className="text-xl sm:text-2xl font-bold">Get Started</h2>
-                    <p className="text-sm sm:text-base text-muted-foreground">Enter your mobile number to continue</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="mobile" className="text-sm sm:text-base">
-                      Mobile Number
-                    </Label>
-                    <div className="flex gap-2">
-                      <div className="flex items-center justify-center px-3 py-2 border rounded-md bg-muted text-sm sm:text-base">
-                        +91
-                      </div>
-                      <Input
-                        id="mobile"
-                        type="tel"
-                        placeholder="Enter 10-digit number"
-                        value={mobileNumber}
-                        onChange={(e) => setMobileNumber(e.target.value)}
-                        maxLength={10}
-                        className="text-sm sm:text-base"
-                        required
-                      />
-                    </div>
-                    {error && <p className="text-sm text-destructive">{error}</p>}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-10 sm:h-11 text-sm sm:text-base"
-                    size="lg"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Sending OTP..." : "Continue with OTP"}
-                  </Button>
-
-                  <p className="text-xs text-center text-muted-foreground px-2">
-                    By continuing, you agree to our{" "}
-                    <Link href="/terms" className="underline hover:text-foreground">
-                      Terms & Conditions
-                    </Link>{" "}
-                    and{" "}
-                    <Link href="/privacy" className="underline hover:text-foreground">
-                      Privacy Policy
-                    </Link>
-                  </p>
-                </form>
-              ) : (
-                <form onSubmit={handleOtpSubmit} className="space-y-4 sm:space-y-6">
-                  <div className="space-y-2 text-center">
-                    <h2 className="text-xl sm:text-2xl font-bold">Verify OTP</h2>
-                    <p className="text-sm sm:text-base text-muted-foreground">
-                      We've sent a 6-digit code to
-                      <br />
-                      <span className="font-medium text-foreground">+91 {mobileNumber}</span>
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="otp" className="text-sm sm:text-base">
-                      Enter OTP
-                    </Label>
-                    <Input
-                      id="otp"
-                      type="text"
-                      placeholder="6-digit OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      maxLength={6}
-                      className="text-center text-lg tracking-widest"
-                      required
-                    />
-                    {error && <p className="text-sm text-destructive text-center">{error}</p>}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-10 sm:h-11 text-sm sm:text-base"
-                    size="lg"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Verifying..." : "Verify & Start"}
-                  </Button>
-
-                  <div className="text-center text-sm">
-                    <button type="button" onClick={() => setStep("mobile")} className="text-primary hover:underline">
-                      Change Number
-                    </button>
-                    <span className="mx-2 text-muted-foreground">•</span>
-                    {timer > 0 ? (
-                      <p className="text-muted-foreground flex items-center justify-center gap-1.5">
-                        <Clock className="w-4 h-4" />
-                        Resend OTP in {timer}s
-                      </p>
-                    ) : (
-                      <Button variant="link" type="button" onClick={handleResendOtp} className="h-auto p-0">
-                        Resend OTP
-                      </Button>
-                    )}
-                  </div>
-                </form>
-              )}
-            </Card>
+            <OtpLoginForm
+              loginType="customer"
+              title="Get Started"
+              subtitle="Enter your mobile number to continue"
+            />
           </div>
         </div>
       </section>
